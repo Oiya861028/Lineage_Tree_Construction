@@ -1,5 +1,6 @@
 import warnings
 from typing import List, Literal, Optional, Tuple
+import warnings
 
 import moscot as mt
 import moscot.plotting as mtp
@@ -133,3 +134,64 @@ def compute_errors(
     )
 
     return ancestor_errors, descendant_errors
+
+def compute_pearsonNorm_pca_umap_leiden(
+        adata, 
+        n_highly_variable,
+        n_pc, 
+):
+    adata.layers['raw'] = adata.X.copy()
+    sc.experimental.pp.recipe_pearson_residuals(adata, n_comps=50, n_top_genes=2000, chunksize=1000, clip=np.sqrt(adata.n_obs))
+
+
+def matrixfy_character_obsm(
+        adata,
+        key: str | None,
+        lineage_barcode_obsm_name: str | None = 'characters',
+        special_symbols_characterization: dict | None = {"*": 0, "-": -1, "!": 999}, 
+):
+    '''
+    Processing lineage_barcode to remove any non numerical values in the matrix. 
+    Note: Special symbols meaning was estimated. If actually annotation exist (from pipeline documentation, for example),
+    should pass in that instead. 
+
+    Parameters
+    ----------
+    adata 
+        An adata containing gene and lineage information from ALL days, and especially should contain an obsm for lineage barcode character matrix.
+
+    key
+        A name for the modified obsm matrix to be stored in. By default replaces the current character matrix. 
+
+    lienage_barcode_obsm_name
+        Name of the character matrix obsm
+    
+    special_symbols_characterization
+        A dictionary containing all the symbols with their respecive numerical value to replace. By default, replaces the 
+        *, -, ! to 0, -1, and 999 respectively. 
+        Meaning of symbols:
+        "*": 0, no change
+        "-": -1, not detected
+        "!": 999, detected, but not editable
+    
+    Returns
+    -------
+    adata
+        Adata with the updated character matrix, where it should only be compose of int64 datatype; stored in `key` if specified, 
+        otherwise replace the existing character matrix 
+    '''
+    if key == None:
+        key = lineage_barcode_obsm_name
+
+    # Extracting the character matrix 
+    chars = adata.obsm[lineage_barcode_obsm_name]
+
+    for key, value in special_symbols_characterization.items():
+        chars = np.where(chars == key, value, chars)
+    
+    adata.obsm[key] = chars.astype(int)
+
+    if (adata.obsm[key].dtype) != np.int32:
+        warnings.warn("Matrix is not fully transform to numerical values. There might be a symbol that was not replaced.")
+
+    return adata
