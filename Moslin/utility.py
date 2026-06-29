@@ -135,19 +135,19 @@ def compute_errors(
 
     return ancestor_errors, descendant_errors
 
-def compute_pearsonNorm_pca_umap_leiden(
-        adata, 
-        n_highly_variable,
-        n_pc, 
-):
-    adata.layers['raw'] = adata.X.copy()
-    sc.experimental.pp.recipe_pearson_residuals(adata, n_comps=50, n_top_genes=2000, chunksize=1000, clip=np.sqrt(adata.n_obs))
+# def compute_pearsonNorm_pca_umap_leiden(
+#         adata, 
+#         n_highly_variable,
+#         n_pc, 
+# ):
+#     adata.layers['raw'] = adata.X.copy()
+#     sc.experimental.pp.recipe_pearson_residuals(adata, n_comps=50, n_top_genes=2000, chunksize=1000, clip=np.sqrt(adata.n_obs))
 
 
 def matrixfy_character_obsm(
         adata,
-        key: str | None,
-        lineage_barcode_obsm_name: str | None = 'characters',
+        key: str | None = None,
+        lineage_barcode_obsm_name: str | None = 'X_characters',
         special_symbols_characterization: dict | None = {"*": 0, "-": -1, "!": 999}, 
 ):
     '''
@@ -186,8 +186,8 @@ def matrixfy_character_obsm(
     # Extracting the character matrix 
     chars = adata.obsm[lineage_barcode_obsm_name]
 
-    for key, value in special_symbols_characterization.items():
-        chars = np.where(chars == key, value, chars)
+    for k, v in special_symbols_characterization.items():
+        chars = np.where(chars == k, v, chars)
     
     adata.obsm[key] = chars.astype(int)
 
