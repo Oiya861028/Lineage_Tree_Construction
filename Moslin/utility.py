@@ -140,7 +140,6 @@ def compute_hvg_pca_fastRNA(
         adata, 
         batch_key,
         n_highly_variable = 2000,
-        n_pc = 50, 
 ):
     """
     Computes the hvg and pca using fastRNA, a more memory and speed efficient method than conventional methods. Takes in raw data.
@@ -155,9 +154,7 @@ def compute_hvg_pca_fastRNA(
     
     n_highly_variable
         Number of highly variable genes to use for pca
-    
-    n_pc
-        Number of pca to generate
+
     """
 
     gene_exp = adata.X
@@ -186,11 +183,11 @@ def compute_hvg_pca_fastRNA(
     # Storing Pca
     idx_unsort = np.argsort(idx_sort) # Need to undo sorting from earlier
     adata
-    adata.obsm["X_pca_fastRNA"] = pca[idx_unsort, :]
+    adata.obsm["X_pca"] = pca[idx_unsort, :]
 
     # Store variance explained (eigenvalues) — scanpy expects ratio and ratio_cumsum
     total_variance = eig_val.sum()
-    adata.uns["pca_fastRNA"] = {
+    adata.uns["pca"] = {
         "variance": eig_val,
         "variance_ratio": eig_val / total_variance,
     }
@@ -199,8 +196,8 @@ def compute_hvg_pca_fastRNA(
     # eig_vec columns correspond to PCs, rows correspond to the selected HVGs
     # Need to map back to full gene space
     loadings_full = np.zeros((adata.n_vars, eig_vec.shape[1]))
-    loadings_full[gene_idx_var[:3000], :] = eig_vec
-    adata.varm["PCs_fastRNA"] = loadings_full
+    loadings_full[gene_idx_var[:n_highly_variable], :] = eig_vec
+    adata.varm["PCs"] = loadings_full
 
     return adata
 
