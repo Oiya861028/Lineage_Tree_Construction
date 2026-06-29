@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 
 import scanpy as sc
 from anndata import AnnData
+from fastrna.core import fastrna_hvg, fastrna_pca
 
 def compute_w2(
     p_1: np.ndarray,
@@ -135,13 +136,74 @@ def compute_errors(
 
     return ancestor_errors, descendant_errors
 
-# def compute_pearsonNorm_pca_umap_leiden(
-#         adata, 
-#         n_highly_variable,
-#         n_pc, 
-# ):
-#     adata.layers['raw'] = adata.X.copy()
-#     sc.experimental.pp.recipe_pearson_residuals(adata, n_comps=50, n_top_genes=2000, chunksize=1000, clip=np.sqrt(adata.n_obs))
+def compute_hvg_pca_fastRNA(
+        adata, 
+        batch_key,
+        n_highly_variable = 2000,
+        n_pc = 50, 
+):
+    """
+    Computes the hvg and pca using fastRNA, a more memory and speed efficient method than conventional methods. Takes in raw data.
+
+    Parameters
+    ----------
+    adata
+        Contains raw data in the X. 
+
+    batch_key
+        Name of obs that labels the cells' batch
+    
+    n_highly_variable
+        Number of highly variable genes to use for pca
+    
+    n_pc
+        Number of pca to generate
+    """
+
+    gene_exp = adata.X
+
+    # Getting index of cells by batch
+    batch_label = pd.factorize(adata.obs[batch_key])[0] # change the column name (Method) if required,
+    batch_label
+    idx_sort = batch_label.argsort()
+
+    # Sorting cells by batch
+    batch_label_sort = batch_label[idx_sort]
+    gene_exp_sort = gene_exp[idx_sort,:].T # note: genes x cells, so sort columns
+
+    # Compute hvg
+    gene_vars = fastrna_hvg(gene_exp_sort, batch_label_sort)
+    gene_idx_var = gene_vars.argsort()[::-1]
+    gene_exp_hvg = gene_exp_sort[gene_idx_var[:n_highly_variable], :]  
+    gene_exp_hvg.sort_indices() # required after gene selection
+
+    # Compute pca
+    numi = np.asarray(gene_exp_sort.sum(axis=0)).ravel() # size factors (total UMI per cell)
+    eig_val, eig_vec, pca, rrt = fastrna_pca(gene_exp_hvg, numi, batch_label_sort)
+
+    # Storing Results
+
+    # Storing Pca
+    idx_unsort = np.argsort(idx_sort) # Need to undo sorting from earlier
+    adata
+    adata.obsm["X_pca_fastRNA"] = pca[idx_unsort, :]
+
+    # Store variance explained (eigenvalues) — scanpy expects ratio and ratio_cumsum
+    total_variance = eig_val.sum()
+    adata.uns["pca_fastRNA"] = {
+        "variance": eig_val,
+        "variance_ratio": eig_val / total_variance,
+    }
+
+    # Store gene loadings (eigenvectors) — shape should be (n_genes, n_pcs)
+    # eig_vec columns correspond to PCs, rows correspond to the selected HVGs
+    # Need to map back to full gene space
+    loadings_full = np.zeros((adata.n_vars, eig_vec.shape[1]))
+    loadings_full[gene_idx_var[:3000], :] = eig_vec
+    adata.varm["PCs_fastRNA"] = loadings_full
+
+    return adata
+
 
 
 def matrixfy_character_obsm(
