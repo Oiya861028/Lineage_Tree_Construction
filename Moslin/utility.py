@@ -155,6 +155,10 @@ def compute_hvg_pca_fastRNA(
     n_highly_variable
         Number of highly variable genes to use for pca
 
+    return
+    ------
+    adata 
+        Containing X_pca and pc variance.
     """
 
     gene_exp = adata.X
