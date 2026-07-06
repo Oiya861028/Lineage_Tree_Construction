@@ -258,3 +258,81 @@ def matrixfy_character_obsm(
         warnings.warn("Matrix is not fully transform to numerical values. There might be a symbol that was not replaced.")
 
     return adata
+
+def add_obs_to_tree(tdata, keys):
+    """Manually push obs columns onto tree nodes, since 0.2.0 has no add_obs_annotation."""
+    for tree_name, tree in tdata.obst.items():
+        for node in tree.nodes:
+            # leaf nodes are named by their cell barcode, matching tdata.obs.index
+            if node in tdata.obs.index:
+                for key in keys:
+                    tree.nodes[node][key] = tdata.obs.loc[node, key]
+
+def add_node_attrs_to_edges(tdata, keys):
+    """Copy node attributes onto their outgoing edges, which is what pl.branches() reads."""
+    for tree_name, tree in tdata.obst.items():
+        for parent, child in tree.edges:
+            for key in keys:
+                # branches() colors by the child node's attribute
+                val = tree.nodes[child].get(key)
+                if val is not None:
+                    tree.edges[parent, child][key] = val
+
+def flag_mixed_nodes(tdata, tree_key, cell_type_key="cell_type"):
+    """
+    After ancestral_states, override cell_type to 'mixed' for any internal
+    node whose direct children have more than one distinct cell type.
+    Leaves are never overridden.
+    """
+    tree = tdata.obst[tree_key]
+    for node in tree.nodes:
+        if tree.out_degree(node) == 0:
+            continue  # skip leaves
+        child_types = set(
+            tree.nodes[c].get(cell_type_key)
+            for c in tree.successors(node)
+            if tree.nodes[c].get(cell_type_key) is not None
+        )
+        if len(child_types) > 1:
+            tree.nodes[node][cell_type_key] = "mixed"
+
+def add_gene_expression_to_tree(tdata, tree_key, gene, layer=None):
+    """
+    For each leaf node, add mean expression of gene as a node attribute.
+    For internal nodes, use the mean across all descendant leaves.
+
+    Parameters
+    ----------
+    tdata : TreeData
+    tree_key : str
+    gene : str, must be in tdata.var_names
+    layer : str or None, if None uses tdata.X
+    """
+    tree = tdata.obst[tree_key]
+
+    # get expression vector for all cells
+    gene_idx = tdata.var_names.get_loc(gene)
+    if layer is not None:
+        expr = np.array(tdata.layers[layer][:, gene_idx]).flatten()
+    else:
+        import scipy.sparse as sp
+        X = tdata.X
+        expr = np.array(X[:, gene_idx].todense()).flatten() if sp.issparse(X) else X[:, gene_idx]
+
+    # map barcode -> expression value
+    barcode_to_expr = dict(zip(tdata.obs.index, expr))
+
+    # for each node, compute mean expression across all descendant leaves
+    for node in reversed(list(nx.topological_sort(tree))):
+        if tree.out_degree(node) == 0:
+            # leaf: look up directly
+            val = barcode_to_expr.get(node, np.nan)
+        else:
+            # internal: mean over all descendant leaves
+            desc_leaves = [
+                n for n in nx.descendants(tree, node)
+                if tree.out_degree(n) == 0
+            ]
+            vals = [barcode_to_expr[l] for l in desc_leaves if l in barcode_to_expr]
+            val = np.mean(vals) if vals else np.nan
+        tree.nodes[node][gene] = val
