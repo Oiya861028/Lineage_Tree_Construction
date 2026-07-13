@@ -7,7 +7,6 @@ def merge_robin_pijuan_atlas(
     pijuan_atlas,
     time, 
     celltype_label, 
-    robin_time_label = "TimeStampMerged", 
     robin_celltype_label = "Annotation",
     pijuan_time_label = "stage",
     pijuan_celltype_label = "celltype_PijuanSala2019"
@@ -15,6 +14,30 @@ def merge_robin_pijuan_atlas(
     '''
     Merging robin's celltype annotation into pijuan's old 2019 atlas, replacing only the cardiac celltype labels 
     and keeping every other type of label the same for background
+
+    Parameters 
+    ----------
+    robin_atlas
+        Robin's time specific adata containing celltype annotation
+
+    pijuan_atlas
+        Pijuan's full atlas with all time, will be subsetted with `time` parameter
+    
+    celltype_label
+        the obs label that will store the merged celltype, should be the same name that you would pass into celltypist training
+    
+    robin_celltype_label
+        Obs name for robin's celltype atlas
+    
+    pijuan_time_label
+        Obs name for Pijuan's cell time
+    
+    pijuan_celltype_label 
+        Obs name for Pijuan's old dataset celltype label
+
+    Return
+    ------
+    Adata containing robin's cardiac labeling with only pijuan's old cells 
     '''
 
 
