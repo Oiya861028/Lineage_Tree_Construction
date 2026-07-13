@@ -13,14 +13,17 @@ def merge_robin_pijuan_atlas(
     pijuan_celltype_label = "celltype_PijuanSala2019"
 ):
     '''
-    Merging robin's celltype annotation into pijuan's atlas
+    Merging robin's celltype annotation into pijuan's old 2019 atlas, replacing only the cardiac celltype labels 
+    and keeping every other type of label the same for background
     '''
 
 
 
     # subset pijuan to desired timepoint 
-    pijuan_atlas = pijuan_atlas[pijuan_atlas.obs[pijuan_time_label] == time] 
+    pijuan_new_atlas = pijuan_atlas[pijuan_atlas.obs[pijuan_time_label] == time] 
 
+    # Taking only the cells from 2019
+    pijuan_atlas = pijuan_atlas[pijuan_atlas.obs[pijuan_celltype_label] != "New cells"]
     # setting index
     pijuan_atlas.obs.set_index('cell', inplace=True)
 
