@@ -43,7 +43,7 @@ def merge_robin_pijuan_atlas(
 
 
     # subset pijuan to desired timepoint 
-    pijuan_new_atlas = pijuan_atlas[pijuan_atlas.obs[pijuan_time_label] == time] 
+    pijuan_atlas = pijuan_atlas[pijuan_atlas.obs[pijuan_time_label] == time] 
 
     # Taking only the cells from 2019
     pijuan_atlas = pijuan_atlas[pijuan_atlas.obs[pijuan_celltype_label] != "New cells"]

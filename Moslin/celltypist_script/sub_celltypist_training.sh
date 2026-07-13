@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --job-name=robin_pijuan_E8.5
 #SBATCH --account=pi-imoskowitz
-#SBATCH --output=/project/imoskowitz/yubin/Lineage_Tree_Construction/output_data/Celltypist/celltypist_%j.out 
-#SBATCH --error=/project/imoskowitz/yubin/Lineage_Tree_Construction/output_data/Celltypist/celltypist_%j.err
+#SBATCH --output=/project/imoskowitz/yubin/Lineage_Tree_Construction/output_data/Celltypist/Models/Robin_Pijuan/E8_5/celltypist_%j.out 
+#SBATCH --error=/project/imoskowitz/yubin/Lineage_Tree_Construction/output_data/Celltypist/Models/Robin_Pijuan/E8_5/celltypist_%j.err
 #SBATCH --partition=bigmem
 #SBATCH --mem=128G
 #SBATCH --cpus-per-task=16
