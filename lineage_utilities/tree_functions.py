@@ -8,6 +8,9 @@ import pandas as pd
 from sklearn.metrics.pairwise import euclidean_distances
 
 import matplotlib.pyplot as plt
+import pycea as py
+
+LARGE_TREE_THRESHOLD  = 10000
 
 def add_obs_to_tree(tdata, keys):
     """Manually push obs columns onto tree nodes, since 0.2.0 has no add_obs_annotation."""
@@ -93,7 +96,8 @@ def plot_tree_custom(clone_tdata,
                      color,
                      palette: None | str | list = None,
                      n_leaf=5,
-                     output_path_plot: str | None = None
+                     output_path_plot: str | None = None,
+                     large_tree_threshold=LARGE_TREE_THRESHOLD
 ):
     """
     Given a tdata with obst, plots:
@@ -126,6 +130,10 @@ def plot_tree_custom(clone_tdata,
         "leaf_order"  : list of leaf names
         "valid_types" : list of valid (non-NaN) cell type labels
     """
+
+    n_cells = clone_tdata.n_obs
+    is_large = n_cells > large_tree_threshold
+
     from matplotlib import gridspec
 
     # Taking care of the palette
@@ -163,6 +171,7 @@ def plot_tree_custom(clone_tdata,
         angled_branches=True,
         tree=clone_key,
         legend=False,
+        rasterized=is_large,
         ax=ax_tree,
     )
     py.pl.nodes(
@@ -173,6 +182,7 @@ def plot_tree_custom(clone_tdata,
         size=10,
         legend=False,
         tree=clone_key,
+        rasterized=is_large,
         ax=ax_tree,
     )
     ax_tree.set_title(f"Lineage tree — {clone_key}", fontsize=14)
@@ -188,7 +198,10 @@ def plot_tree_custom(clone_tdata,
         plt.show()
         result_ax = ax_tree
     else:
-        plt.savefig(output_path_plot + clone_key + "_tree_with_scatter_histogram.svg", bbox_inches='tight')
+        ext = "png" if is_large else "svg"  # PNG for huge trees: fixed-size raster, not vector-element-count-dependent
+        dpi = 150 if is_large else None
+        plt.savefig(output_path_plot + clone_key + f"_tree_with_scatter_histogram.{ext}",
+                    bbox_inches='tight', dpi=dpi)
         result_ax = None
     plt.close(fig)
 
@@ -200,9 +213,22 @@ def plot_tree_custom(clone_tdata,
         "valid_types": valid_types,
     }
 
-def compute_lca_depth_points(clone_tdata, clone_key, color, n_leaf=5):
+from joblib import Parallel, delayed
+
+def compute_lca_depth_points(clone_tdata, clone_key, color, n_leaf=5, n_jobs=4):
     """
     Computes sliding-window LCA depth stats for each cell type.
+    Avoids materializing a full reordered n x n copy of the LCA matrix —
+    only tiny per-window submatrices are extracted and densified as needed.
+    Uses threads (not processes) to parallelize across (window, cell_type)
+    groups, since each is just NumPy slicing/reduction and releases the GIL.
+
+    Parameters
+    ----------
+    n_jobs : int
+        Number of threads to use. 1 = sequential (no parallel overhead).
+        Uses joblib's "threading" backend, not "loky" — avoids spawning
+        separate processes (and their re-import overhead/crashes).
 
     Returns
     -------
@@ -213,48 +239,57 @@ def compute_lca_depth_points(clone_tdata, clone_key, color, n_leaf=5):
     """
     py.tl.tree_distance(clone_tdata, tree=clone_key, metric="lca", key_added="lca")
     lca_depths = clone_tdata.obsp["lca_distances"]
-    if hasattr(lca_depths, "toarray"):
-        lca_depths = lca_depths.toarray()
+    is_sparse = hasattr(lca_depths, "toarray")
+    if is_sparse:
+        lca_depths = lca_depths.tocsr()
 
     leaf_order = py.get.leaves(clone_tdata, tree=clone_key)
     n = len(leaf_order)
 
-    # Precompute leaf -> row/col index once
     leaf_idx_map = {name: i for i, name in enumerate(clone_tdata.obs_names)}
     leaf_indices = np.array([leaf_idx_map[leaf] for leaf in leaf_order])
-
-    # Reorder the full LCA matrix to leaf_order once
-    lca_leaf = lca_depths[np.ix_(leaf_indices, leaf_indices)]
 
     cell_types = clone_tdata.obs.loc[leaf_order, color].astype(str).to_numpy()
     valid_types = [ct for ct in np.unique(cell_types) if ct not in {"nan", "None", "", "<NA>"}]
 
-    # Assign each leaf a window id, build one small dataframe to group by (window, cell_type)
     window_id = np.arange(n) // n_leaf
     df = pd.DataFrame({"window_id": window_id, "cell_type": cell_types, "pos": np.arange(n)})
     df = df[df["cell_type"].isin(valid_types)]
 
-    # Only windows with >=2 total leaves are valid (matches original's window-level skip)
     window_sizes = pd.Series(window_id).value_counts()
     valid_windows = set(window_sizes[window_sizes >= 2].index)
 
-    points = []
-    depth_count = {ct: {} for ct in valid_types}
-
-    # groupby only visits (window, cell_type) pairs that actually occur —
-    # no wasted iterations over empty combinations
+    # Build the list of (window, cell_type) tasks first — cheap, sequential.
+    # This is what previously drove the loop body directly; now it just
+    # collects the work items so they can be dispatched in parallel.
+    tasks = []
     for (w, ct), group in df.groupby(["window_id", "cell_type"], sort=False):
         if w not in valid_windows or len(group) < 2:
             continue
-        idx = group["pos"].to_numpy()
+        pos_idx = group["pos"].to_numpy()
+        orig_idx = leaf_indices[pos_idx]
         middle_pos = min(w * n_leaf + 2, n - 1)
+        tasks.append((orig_idx, middle_pos, ct))
 
-        sub = lca_leaf[np.ix_(idx, idx)]
-        tri = np.triu_indices(len(idx), k=1)
+    def _process_task(orig_idx, middle_pos, ct):
+        sub = lca_depths[orig_idx, :][:, orig_idx]
+        if is_sparse:
+            sub = sub.toarray()
+        tri = np.triu_indices(len(orig_idx), k=1)
         pair_depths = sub[tri]
         ancestor_depth = float(pair_depths.min()) if pair_depths.size else 0.0
+        return ancestor_depth, middle_pos, ct
 
-        points.append((ancestor_depth, middle_pos, ct))
+    if n_jobs == 1:
+        results = [_process_task(*t) for t in tasks]
+    else:
+        results = Parallel(n_jobs=n_jobs, backend="threading")(
+            delayed(_process_task)(*t) for t in tasks
+        )
+
+    points = results
+    depth_count = {ct: {} for ct in valid_types}
+    for ancestor_depth, middle_pos, ct in points:
         depth_count[ct][ancestor_depth] = depth_count[ct].get(ancestor_depth, 0) + 1
 
     return points, depth_count, leaf_order, valid_types
