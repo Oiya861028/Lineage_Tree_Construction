@@ -1,3 +1,14 @@
+import warnings
+from typing import List, Literal, Optional, Tuple
+import warnings
+
+import treedata as td
+import numpy as np
+import pandas as pd
+from sklearn.metrics.pairwise import euclidean_distances
+
+import matplotlib.pyplot as plt
+
 def add_obs_to_tree(tdata, keys):
     """Manually push obs columns onto tree nodes, since 0.2.0 has no add_obs_annotation."""
     for tree_name, tree in tdata.obst.items():
@@ -309,3 +320,60 @@ def plot_depth_histogram(ax_points, depth_count, valid_types, palette):
 
     return ax_hist
 
+def get_color_palette(adata, color_key, palette=None, default_cmap="tab10"):
+    """
+    Build a {category: color} dict for adata.obs[color_key], staying consistent
+    with any existing palette saved in adata.uns, and always including gray
+    for NaN / missing values.
+
+    Parameters
+    ----------
+    adata
+        AnnData / TreeData object
+    color_key : str
+        obs column to build colors for
+    palette : str | list | dict | None
+        - None: look for adata.uns[f"{color_key}_colors"] first (scanpy convention);
+          if not found, generate from `default_cmap`
+        - str: either a key in adata.uns (a saved palette) or a matplotlib
+          colormap name (e.g. "tab10", "tab20", "Set2")
+        - list: ordered colors, zipped with sorted categories
+        - dict: explicit mapping; any categories it's missing get auto-filled
+
+    Returns
+    -------
+    dict mapping category -> color, plus "mixed" and NaN entries
+    """
+    categories = adata.obs[color_key].astype("category").cat.categories.tolist()
+    resolved = {}
+
+    if isinstance(palette, dict):
+        resolved = dict(palette)
+    elif isinstance(palette, list):
+        resolved = dict(zip(categories, palette))
+    elif isinstance(palette, str):
+        if palette in adata.uns:
+            resolved = dict(zip(categories, adata.uns[palette]))
+        else:
+            cmap = plt.get_cmap(palette)
+            resolved = {cat: cmap(i % cmap.N) for i, cat in enumerate(categories)}
+    elif palette is None:
+        uns_key = f"{color_key}_colors"
+        if uns_key in adata.uns:
+            resolved = dict(zip(categories, adata.uns[uns_key]))
+        else:
+            cmap = plt.get_cmap(default_cmap)
+            resolved = {cat: cmap(i % cmap.N) for i, cat in enumerate(categories)}
+
+    # fill any categories still missing a color (e.g. dict/list didn't cover all)
+    cmap = plt.get_cmap(default_cmap)
+    for i, cat in enumerate(categories):
+        if cat not in resolved:
+            resolved[cat] = cmap(i % cmap.N)
+
+    # reserved, always-consistent entries
+    resolved["mixed"] = (0.6, 0.6, 0.6, 1.0)
+    resolved[np.nan] = "lightgray"
+    resolved["nan"] = "lightgray"   # covers the common case where obs got cast to str
+
+    return resolved
