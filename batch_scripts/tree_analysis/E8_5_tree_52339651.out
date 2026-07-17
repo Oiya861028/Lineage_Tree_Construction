@@ -1,4 +1,0 @@
-Traceback (most recent call last):
-  File "/project/imoskowitz/yubin/Lineage_Tree_Construction/batch_scripts/tree_analysis/run_tree_analysis.py", line 181, in <module>
-    adata = td.readh5td("/project/imoskowitz/yubin/Lineage_Tree_Construction/output_data/Processed_data/E8_5.h5td")
-AttributeError: module 'treedata' has no attribute 'readh5td'. Did you mean: 'read_h5td'?

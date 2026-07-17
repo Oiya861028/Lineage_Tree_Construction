@@ -20,7 +20,7 @@ def analyze_tree(clone_tdata, clone_key, color, n_permutations=500, random_state
     dict with keys: "leaf_depth_rows", "resolution_stats", "permutation_stats"
     """
     # --- shared preprocessing (once per tree) ---
-    add_obs_to_tree(clone_tdata, keys=[color, "germ_layer"])
+    add_obs_to_tree(clone_tdata, keys=[color, "germ_layer"]) # Not sure what germ_layer is for, maybe remove?
     py.pp.add_depth(clone_tdata)
     py.tl.tree_distance(clone_tdata, tree=clone_key, metric="lca", key_added="lca")
 
@@ -182,10 +182,13 @@ adata = td.read_h5td("/project/imoskowitz/yubin/Lineage_Tree_Construction/output
 data_dir = "output_data"
 plot_dir = "output_plot"
 base_path = "/project/imoskowitz/yubin/Lineage_Tree_Construction/"
-output_path_data = base_path+data_dir+"/"
-output_path_plot = base_path+plot_dir+"/Trees/Robin_Pijuan/Manual_Cardiac_Annotation/E8_5/"
+output_path_data = base_path+data_dir+"/Trees/Robin_Pijuan_celltypist/Manual_Cardiac_Annotation/E8_5/"
+output_path_plot = base_path+plot_dir+"/Trees/Robin_Pijuan_celltypist/Manual_Cardiac_Annotation/E8_5/"
 
-EXCLUDED_TREES = {"E8.5-R3-C1", "E8.5-R2-C1", "E8.5-R2-C2"}
+
+# EXCLUDED_TREES = {"E8.5-R3-C1", "E8.5-R2-C1", "E8.5-R2-C2"} Run one excluded these trees
+# Run two will compute these trees but exclude the rest that are already computed
+EXCLUDED_TREES = set(adata.obs['tree']) - {"E8.5-R3-C1", "E8.5-R2-C1", "E8.5-R2-C2"} 
 paths = run_full_tree_analysis(
     adata,
     tree_key='tree',
