@@ -1,0 +1,17 @@
+analyzing E8.5-R1-C1 (6192 cells)
+complete E8.5-R1-C1
+analyzing E8.5-R1-C2 (2256 cells)
+complete E8.5-R1-C2
+analyzing E8.5-R1-C3 (2955 cells)
+complete E8.5-R1-C3
+analyzing E8.5-R1-C4 (429 cells)
+complete E8.5-R1-C4
+skipping E8.5-R3-C1 (excluded)
+analyzing E8.5-R3-C2 (4202 cells)
+complete E8.5-R3-C2
+analyzing E8.5-R3-C3 (664 cells)
+complete E8.5-R3-C3
+skipping E8.5-R2-C1 (excluded)
+skipping E8.5-R2-C2 (excluded)
+Skipped trees (excluded): ['E8.5-R3-C1', 'E8.5-R2-C1', 'E8.5-R2-C2']
+Failed trees: []

@@ -8,7 +8,7 @@ from src.III_celltype_annotation.annotate_celltypist import (
 )
 # Importing merging atlas function from Yubin 
 sys.path.append("/project/imoskowitz/yubin/Lineage_Tree_Construction/Moslin/celltypist_script")
-from merging_atlas import (
+from Lineage_Tree_Construction.batch_scripts.celltypist_script.merging_atlas import (
     merge_robin_pijuan_atlas # Merging Script designed on Jul 10 2026, some assumption was made for obs names from both atlas. 
 )
 

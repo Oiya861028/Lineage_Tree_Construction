@@ -8,3 +8,42 @@
   plt.tight_layout()
 /project/imoskowitz/yubin/Lineage_Tree_Construction/lineage_utilities/tree_functions.py:196: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
   plt.tight_layout()
+/project/imoskowitz/yubin/Lineage_Tree_Construction/lineage_utilities/tree_functions.py:196: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
+  plt.tight_layout()
+/project/imoskowitz/yubin/Lineage_Tree_Construction/lineage_utilities/tree_functions.py:196: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
+  plt.tight_layout()
+/project/imoskowitz/yubin/Lineage_Tree_Construction/lineage_utilities/tree_functions.py:196: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
+  plt.tight_layout()
+/project/imoskowitz/yubin/Lineage_Tree_Construction/lineage_utilities/tree_functions.py:196: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
+  plt.tight_layout()
+tree
+E8.5-R3-C1    19886
+E8.5-R2-C1    15318
+E8.5-R2-C2    12352
+E8.5-R1-C1     6192
+E8.5-R3-C2     4202
+E8.5-R1-C3     2955
+E8.5-R1-C2     2256
+E8.5-R3-C3      664
+E8.5-R1-C4      429
+Name: count, dtype: int64
+Large trees (may need special handling): ['E8.5-R3-C1', 'E8.5-R2-C1', 'E8.5-R2-C2', 'E8.5-R1-C1', 'E8.5-R3-C2', 'E8.5-R1-C3', 'E8.5-R1-C2']
+starting E8.5-R1-C1 (6192 cells)
+complete E8.5-R1-C1
+starting E8.5-R1-C2 (2256 cells)
+complete E8.5-R1-C2
+starting E8.5-R1-C3 (2955 cells)
+complete E8.5-R1-C3
+starting E8.5-R1-C4 (429 cells)
+complete E8.5-R1-C4
+starting E8.5-R3-C1 (19886 cells)
+complete E8.5-R3-C1
+starting E8.5-R3-C2 (4202 cells)
+complete E8.5-R3-C2
+starting E8.5-R3-C3 (664 cells)
+complete E8.5-R3-C3
+starting E8.5-R2-C1 (15318 cells)
+complete E8.5-R2-C1
+starting E8.5-R2-C2 (12352 cells)
+complete E8.5-R2-C2
+Failed trees: []
