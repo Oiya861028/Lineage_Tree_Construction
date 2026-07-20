@@ -118,8 +118,8 @@ def run_full_tree_analysis(adata, tree_key='tree', celltype_key='cardiac_labels'
     combined output tables incrementally. Trees in `excluded_trees` are
     skipped entirely (e.g. very large trees to handle separately later).
     """
+    print("starting function")
     excluded_trees = excluded_trees or set()
-
     leaf_depth_csv = output_dir + "leaf_depth_all_trees.csv"
     resolution_csv = output_dir + "resolution_all_trees.csv"
     permutation_csv = output_dir + "permutation_all_trees.csv"
