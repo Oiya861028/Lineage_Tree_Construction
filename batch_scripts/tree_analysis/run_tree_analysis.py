@@ -8,13 +8,17 @@ import sys
 sys.path.append("/project/imoskowitz/yubin/Lineage_Tree_Construction")
 from lineage_utilities.tree_functions import *
 
-def analyze_tree(clone_tdata, clone_key, color, n_permutations=500, random_state=0):
+def analyze_tree(clone_tdata, clone_key, color, distance_metric='lca', n_permutations=500, random_state=0, ):
     """
     Single-pass per-tree analysis: runs shared preprocessing once, then
     computes leaf-depth records, polytomy/resolution stats, and a
     same-type-vs-different-type LCA permutation test — all reusing the
     same tree_distance/LCA matrix and depth annotation.
 
+    Parameters
+    ----------
+    color 
+        What to color the leaves as well as conduct comparison by. Usually the celltype or some other sort of cluster labeling. 
     Returns
     -------
     dict with keys: "leaf_depth_rows", "resolution_stats", "permutation_stats"
@@ -22,7 +26,7 @@ def analyze_tree(clone_tdata, clone_key, color, n_permutations=500, random_state
     # --- shared preprocessing (once per tree) ---
     add_obs_to_tree(clone_tdata, keys=[color, "germ_layer"]) # Not sure what germ_layer is for, maybe remove?
     py.pp.add_depth(clone_tdata)
-    py.tl.tree_distance(clone_tdata, tree=clone_key, metric="lca", key_added="lca")
+    py.tl.tree_distance(clone_tdata, tree=clone_key, metric=distance_metric, key_added=distance_metric)
 
     tree_graph = clone_tdata.obst[clone_key]
     leaf_order = py.get.leaves(clone_tdata, tree=clone_key)
@@ -86,7 +90,7 @@ def analyze_tree(clone_tdata, clone_key, color, n_permutations=500, random_state
         shuffled = rng.permutation(cell_types)
         same_type_p = shuffled[tri_i] == shuffled[tri_j]
         valid_p = ~np.isin(shuffled[tri_i], ["nan", "None", "", "<NA>"]) & \
-                  ~np.isin(shuffled[tri_j], ["nan", "None", "", "<NA>"])
+                  ~np.isin(shuffled[tri_j], ["nan", "None", "", "<NA>"]) 
         same_mean_p = pair_depths[same_type_p & valid_p].mean() if (same_type_p & valid_p).any() else np.nan
         diff_mean_p = pair_depths[~same_type_p & valid_p].mean() if (~same_type_p & valid_p).any() else np.nan
         null_diffs[p] = same_mean_p - diff_mean_p
@@ -117,6 +121,16 @@ def run_full_tree_analysis(adata, tree_key='tree', celltype_key='cardiac_labels'
     Loops over every tree once, running all diagnostics, and writes three
     combined output tables incrementally. Trees in `excluded_trees` are
     skipped entirely (e.g. very large trees to handle separately later).
+
+    Parameter
+    ---------
+    adata 
+        tdata that contains obst for clones
+    
+    tree_key
+        the obs column that contain the name for tree
+    
+    
     """
     print("starting function")
     excluded_trees = excluded_trees or set()
